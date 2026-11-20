@@ -1,0 +1,65 @@
+
+name: Terraform Plan CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout source code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Step 3: Configure AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      # Step 4: Check Terraform formatting
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      # Step 5: Initialize Terraform
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      # Step 6: Validate Terraform configuration
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 7: Generate Terraform plan
+      - name: Terraform Plan
+        run: terraform plan -input=false -out=tfplan
+
+      # Step 8: Generate readable plan
+      - name: Generate Readable Plan
+        run: terraform show -no-color tfplan > tfplan.txt
+
+      # Step 9: Upload plan artifact
+      - name: Upload Terraform Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            tfplan
+            tfplan.txt
+          retention-days: 5
